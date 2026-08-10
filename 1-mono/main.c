@@ -73,10 +73,10 @@ int main()
     AXSetVoiceVe(voice, &volume);
 
     AXVoiceDeviceMixData mixData[2] = {};
-    // Right ear volume
+    // Left ear volume
     mixData[0].bus[0].volume = 0x800;
     mixData[0].bus[0].delta = 0;
-    // Left ear volume
+    // Right ear volume
     mixData[1].bus[0].volume = 0x800;
     mixData[1].bus[0].delta = 0;
     AXSetVoiceDeviceMix(voice, AX_DEVICE_TYPE_DRC, 0, mixData);
