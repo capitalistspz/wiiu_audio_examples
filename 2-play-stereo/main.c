@@ -12,7 +12,7 @@
 #include <stdlib.h>
 
 // Modify this if the path is different
-#define OGG_FILE_PATH "wiiu/stereo-sample.ogg"
+#define OGG_FILE_PATH "stereo-sample.ogg"
 
 #define AX_VOICE_MAX_PRIORITY 31
 
