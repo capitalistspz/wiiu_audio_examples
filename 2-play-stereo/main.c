@@ -1,7 +1,10 @@
+#include <stdio.h>
+
 #include "stb_vorbis.h"
 
 #include <sndcore2/core.h>
 #include <sndcore2/voice.h>
+#include <wut_extra/multivoice.h>
 #include <whb/proc.h>
 #include <whb/log_console.h>
 #include <whb/log.h>
@@ -9,13 +12,13 @@
 #include <stdlib.h>
 
 // Modify this if the path is different
-#define OGG_FILE_PATH "stereo-sample.ogg"
+#define OGG_FILE_PATH "wiiu/stereo-sample.ogg"
 
 #define AX_VOICE_MAX_PRIORITY 31
 
 
-
-static int get_samples_from_file(const char* filepath, int16_t** outLeftSamples, int16_t** outRightSamples, unsigned* outSampleRate);
+static int get_samples_from_file(const char *filepath, int16_t **outLeftSamples, int16_t **outRightSamples,
+                                 unsigned *outSampleRate);
 
 int main()
 {
@@ -31,75 +34,65 @@ int main()
     AXInitWithParams(&params);
 
     unsigned sampleRate = 1;
-    int16_t* rightSamples = nullptr;
-    int16_t* leftSamples = nullptr;
+    int16_t *rightSamples = nullptr;
+    int16_t *leftSamples = nullptr;
     const int sampleCount = get_samples_from_file(OGG_FILE_PATH, &leftSamples, &rightSamples, &sampleRate);
-    if (sampleCount < 0)
-    {
+    if (sampleCount < 0) {
         WHBLogPrintf("Failed to read samples from file");
         goto wait_for_exit;
     }
 
-    // Acquire a voice for each channel
-    AXVoice* leftVoice = AXAcquireVoice(AX_VOICE_MAX_PRIORITY, nullptr, nullptr);
-    if (!leftVoice)
-    {
-        WHBLogPrint("AXAcquireVoice error: Failed to acquire left voice");
+    // Acquire a multi-channel voice
+    AXMultiVoice *multiVoice;
+    AXMultiVoiceAcquireInfo info;
+    info.channelCount = 2;
+    const auto acquireResult = AXAcquireMultiVoice(AX_VOICE_MAX_PRIORITY, nullptr, nullptr, &info, &multiVoice);
+    if (acquireResult != 0) {
+        WHBLogPrintf("Failed to acquire multi-voice: %d", acquireResult);
         goto free_samples;
     }
 
-    AXVoice* rightVoice = AXAcquireVoice(AX_VOICE_MAX_PRIORITY, nullptr, nullptr);
-    if (!leftVoice)
-    {
-        AXFreeVoice(leftVoice);
-        WHBLogPrint("AXAcquireVoice error: Failed to acquire right voice");
-        goto free_samples;
-    }
-
-    AXVoiceOffsets offsets = {
-        // Audio format
-        .dataType = AX_VOICE_FORMAT_LPCM16,
-        .loopingEnabled = false,
-        .loopOffset = 0,
-        // End point
-        .endOffset = sampleCount,
-        // Start point
-        .currentOffset = 0,
-        .data = leftSamples,
+    const AXVoiceOffsets offsets[2] = {
+        {
+            // Audio format
+            .dataType = AX_VOICE_FORMAT_LPCM16,
+            .loopingEnabled = false,
+            .loopOffset = 0,
+            // End point
+            .endOffset = sampleCount,
+            // Start point
+            .currentOffset = 0,
+            .data = leftSamples,
+        },
+        {
+            // Audio format
+            .dataType = AX_VOICE_FORMAT_LPCM16,
+            .loopingEnabled = false,
+            .loopOffset = 0,
+            // End point
+            .endOffset = sampleCount,
+            // Start point
+            .currentOffset = 0,
+            .data = rightSamples,
+        }
     };
-    AXSetVoiceOffsets(leftVoice, &offsets);
-
-    offsets.data = rightSamples;
-    AXSetVoiceOffsets(rightVoice, &offsets);
+    AXSetMultiVoiceOffsets(multiVoice, offsets);
 
     // Sample rate conversion
-    const auto srcRatio = (float)sampleRate / (float)AXGetInputSamplesPerSec();
-    AXSetVoiceSrcType(leftVoice, AX_VOICE_SRC_TYPE_LINEAR);
-    AXSetVoiceSrcRatio(leftVoice, srcRatio);
+    const auto srcRatio = (float) sampleRate / (float) AXGetInputSamplesPerSec();
+    AXSetMultiVoiceSrcType(multiVoice, AX_VOICE_SRC_TYPE_LINEAR);
+    AXSetMultiVoiceSrcRatio(multiVoice, srcRatio);
 
-    AXSetVoiceSrcType(rightVoice, AX_VOICE_SRC_TYPE_LINEAR);
-    AXSetVoiceSrcRatio(rightVoice, srcRatio);
+    // Set volume of voice
+    const AXVoiceVeData volume = {.volume = 0x8000, .delta = 0};
+    AXSetMultiVoiceVe(multiVoice, &volume);
 
-    // Set sound volume
-    AXVoiceVeData volume = {.volume = 0x1000, .delta = 0};
-    AXSetVoiceVe(leftVoice, &volume);
-    AXSetVoiceVe(rightVoice, &volume);
-
-    AXVoiceDeviceMixData mixData[2] = {};
-    // Left ear volume
-    mixData[0].bus[0].volume = 0x800;
-    mixData[0].bus[0].delta = 0;
-    // Right ear volume
-    mixData[1].bus[0].volume = 0;
-    mixData[1].bus[0].delta = 0;
-    AXSetVoiceDeviceMix(leftVoice, AX_DEVICE_TYPE_DRC, 0, mixData);
-    mixData[0].bus[0].volume = 0;
-    mixData[1].bus[0].volume = 0x800;
-    AXSetVoiceDeviceMix(rightVoice, AX_DEVICE_TYPE_DRC, 0, mixData);
+    // Set volume mix of voice for device
+    AXSetMultiVoiceDeviceMix(multiVoice, AX_DEVICE_TYPE_DRC, 0, 0, 0x800, 0);
+    AXSetMultiVoiceDeviceMix(multiVoice, AX_DEVICE_TYPE_TV, 0, 0, 0x800, 0);
 
     // Play voice
-    AXSetVoiceState(leftVoice, AX_VOICE_STATE_PLAYING);
-    AXSetVoiceState(rightVoice, AX_VOICE_STATE_PLAYING);
+    AXSetMultiVoiceState(multiVoice, AX_VOICE_STATE_PLAYING);
 
     WHBLogPrint("Playing sound");
     WHBLogConsoleDraw();
@@ -107,13 +100,11 @@ int main()
     earlyExit = false;
 
     // Wait for exit
-    while (WHBProcIsRunning())
-    {
+    while (WHBProcIsRunning()) {
         if (!wasPlaying)
             continue;
 
-        if (!AXIsVoiceRunning(leftVoice))
-        {
+        if (!AXIsMultiVoiceRunning(multiVoice)) {
             WHBLogPrint("Finished playing sound (exit app via HOME menu)");
             WHBLogConsoleDraw();
             wasPlaying = false;
@@ -121,21 +112,17 @@ int main()
     }
 
     // Release voice resources
-    AXFreeVoice(leftVoice);
-    AXFreeVoice(rightVoice);
+    AXFreeMultiVoice(multiVoice);
 
-    free_samples:
+free_samples:
     free(leftSamples);
     free(rightSamples);
 
-    wait_for_exit:
-    if (earlyExit)
-    {
+wait_for_exit:
+    if (earlyExit) {
         WHBLogPrint("Waiting for exit... (exit via HOME menu)");
         WHBLogConsoleDraw();
-        while (WHBProcIsRunning())
-        {
-
+        while (WHBProcIsRunning()) {
         }
     }
     // Free libraries
@@ -145,18 +132,16 @@ int main()
     return 0;
 }
 
-static int get_samples_from_file(const char* filepath, int16_t** outLeftSamples, int16_t** outRightSamples, unsigned* outSampleRate)
-{
+static int get_samples_from_file(const char *filepath, int16_t **outLeftSamples, int16_t **outRightSamples,
+                                 unsigned *outSampleRate) {
     int error = 0;
-    struct stb_vorbis* vorbis = stb_vorbis_open_filename(filepath, &error, nullptr);
-    if (error)
-    {
+    struct stb_vorbis *vorbis = stb_vorbis_open_filename(filepath, &error, nullptr);
+    if (error) {
         WHBLogPrintf("stb_vorbis_open_filename error: %d", error);
         return -1;
     }
     const stb_vorbis_info info = stb_vorbis_get_info(vorbis);
-    if (info.channels != 2)
-    {
+    if (info.channels != 2) {
         stb_vorbis_close(vorbis);
         WHBLogPrintf("Error: This example only supports stereo audio, file audio has %d channels", info.channels);
         return -2;
@@ -164,12 +149,20 @@ static int get_samples_from_file(const char* filepath, int16_t** outLeftSamples,
     const unsigned sampleCount = stb_vorbis_stream_length_in_samples(vorbis);
 
     // Get samples
-    *outRightSamples = (int16_t*)malloc(sampleCount * sizeof(int16_t));
-    *outLeftSamples = (int16_t*)malloc(sampleCount * sizeof(int16_t));
-    int16_t* samplesArray[2] = { *outLeftSamples, *outRightSamples };
-    stb_vorbis_get_samples_short(vorbis, 2, samplesArray, (int)sampleCount);
+    const auto leftSamples =  (int16_t *) malloc(sampleCount * sizeof(int16_t));
+    const auto rightSamples =  (int16_t *) malloc(sampleCount * sizeof(int16_t));
+    int16_t *samplesArray[2] = {leftSamples, rightSamples};
+    const auto actualSampleCount = stb_vorbis_get_samples_short(vorbis, 2, samplesArray, (int) sampleCount);
+    for (auto i = 0; i < sampleCount; ++i) {
+        if (rightSamples[i] != 0) {
+            OSReport("%d\n", i);
+            break;
+        }
+    }
+    *outRightSamples = rightSamples;
+    *outLeftSamples = leftSamples;
 
     stb_vorbis_close(vorbis);
     *outSampleRate = info.sample_rate;
-    return (int)sampleCount;
+    return (int) actualSampleCount;
 }
