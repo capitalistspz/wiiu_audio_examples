@@ -8,10 +8,10 @@
 
 #include <stdlib.h>
 
-#define AX_VOICE_MAX_PRIORITY 31
+// Modify this if the path is different
+#define OGG_FILE_PATH "mono-sample.ogg"
 
-// Define as you wish
-#define OGG_FILE_PATH "sample.ogg"
+#define AX_VOICE_MAX_PRIORITY 31
 
 int main()
 {

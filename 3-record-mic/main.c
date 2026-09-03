@@ -13,10 +13,14 @@
 #include <stdlib.h>
 #include <sys/endian.h>
 
-#include "simple_wav.h"
+// Define as you wish
+#define OUTPUT_WAV_FILE_PATH "mic-output.wav"
 
+// Define depending on memory availability
 #define MAX_SAMPLES (1 << 18)
+
 #define MIC_SAMPLE_RATE 32000
+
 
 static void inplace_byteswap_16(int16_t *data, uint32_t size);
 
@@ -56,7 +60,7 @@ int main() {
         .audio_format = SIMPLE_WAV_AUDIO_FMT_PCM
     };
     simple_wav_error wavError;
-    const auto wav = simple_wav_wr_open(&formatInfo, "output.wav", &wavError);
+    const auto wav = simple_wav_wr_open(&formatInfo, OUTPUT_WAV_FILE_PATH, &wavError);
     if (!wav) {
         WHBLogPrintf("Failed to create WAV file: %s", simple_wav_strerrorname(wavError));
         goto deinit_mic;
@@ -71,8 +75,8 @@ int main() {
     bool isMicOpen = false;
     while (WHBProcIsRunning()) {
         // Read input from gamepad
-        const auto sampleCount = VPADRead(VPAD_CHAN_0, &vpadStatus, 1, nullptr);
-        if (sampleCount == 0)
+        const auto vpadSampleCount = VPADRead(VPAD_CHAN_0, &vpadStatus, 1, nullptr);
+        if (vpadSampleCount == 0)
             continue;
 
         // Check for A press

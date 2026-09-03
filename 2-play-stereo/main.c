@@ -8,10 +8,11 @@
 
 #include <stdlib.h>
 
+// Modify this if the path is different
+#define OGG_FILE_PATH "stereo-sample.ogg"
+
 #define AX_VOICE_MAX_PRIORITY 31
 
-// Define as you wish
-#define OGG_FILE_PATH "/vol/cz/stereo-test-new.ogg"
 
 
 int get_samples_from_file(const char* filepath, int16_t** outLeftSamples, int16_t** outRightSamples, unsigned* outSampleRate);
