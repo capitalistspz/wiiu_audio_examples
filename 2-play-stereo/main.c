@@ -15,7 +15,7 @@
 
 
 
-int get_samples_from_file(const char* filepath, int16_t** outLeftSamples, int16_t** outRightSamples, unsigned* outSampleRate);
+static int get_samples_from_file(const char* filepath, int16_t** outLeftSamples, int16_t** outRightSamples, unsigned* outSampleRate);
 
 int main()
 {
@@ -145,7 +145,7 @@ int main()
     return 0;
 }
 
-int get_samples_from_file(const char* filepath, int16_t** outLeftSamples, int16_t** outRightSamples, unsigned* outSampleRate)
+static int get_samples_from_file(const char* filepath, int16_t** outLeftSamples, int16_t** outRightSamples, unsigned* outSampleRate)
 {
     int error = 0;
     struct stb_vorbis* vorbis = stb_vorbis_open_filename(filepath, &error, nullptr);
