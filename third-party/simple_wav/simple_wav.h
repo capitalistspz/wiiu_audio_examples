@@ -57,6 +57,11 @@ typedef struct {
 typedef struct simple_wav_writer simple_wav_writer;
 typedef struct simple_wav_reader simple_wav_reader;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
 /**
  * Create a WAV file, and return a handle for writing to it
  * \param info format of the WAV
@@ -156,4 +161,8 @@ SIMPLE_WAV_ATTR_NONNULL(1) SIMPLE_WAV_ATTR_NONNULL(2) SIMPLE_WAV_ATTR_WRITE_SIZE
 //! Error enum to string
 const char *simple_wav_strerrorname(simple_wav_error error)
 SIMPLE_WAV_RETURNS_NONNULL SIMPLE_WAV_NODISCARD SIMPLE_WAV_CONST;
+
+#ifdef __cplusplus
+}
+#endif
 #endif // SIMPLE_WAV_LIBRARY_H
