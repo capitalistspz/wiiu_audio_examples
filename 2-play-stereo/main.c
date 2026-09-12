@@ -58,9 +58,9 @@ int main()
             .dataType = AX_VOICE_FORMAT_LPCM16,
             .loopingEnabled = false,
             .loopOffset = 0,
-            // End point
-            .endOffset = sampleCount,
-            // Start point
+            // Offset of last sample to be played
+            .endOffset = sampleCount - 1,
+            // Offset of first sample to be played
             .currentOffset = 0,
             .data = leftSamples,
         },
@@ -69,9 +69,9 @@ int main()
             .dataType = AX_VOICE_FORMAT_LPCM16,
             .loopingEnabled = false,
             .loopOffset = 0,
-            // End point
-            .endOffset = sampleCount,
-            // Start point
+            // Offset of last sample to be played
+            .endOffset = sampleCount - 1,
+            // Offset of first sample to be played
             .currentOffset = 0,
             .data = rightSamples,
         }
